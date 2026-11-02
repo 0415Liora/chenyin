@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>陳引</title>
+<style>
+  :root{
+    --paper:#f6f5f2;
+    --paper-2:#efeeea;
+    --ink:#26262a;
+    --ink-soft:#5a5a60;
+    --ink-dim:#9a9aa0;
+    --hair:#c9c8c4;
+    --danger:#a03a44;
+    --card:#ffffff;
+    --key-bg:rgba(255,255,255,.62);
+    --veil:rgba(246,245,242,.62);
+    --shadow:0 18px 50px rgba(38,38,42,.08);
+    --serif:"Songti SC","STSong","Noto Serif SC","Source Han Serif SC",Georgia,"Times New Roman",serif;
+    --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  }
+  body[data-mode="night"]{
+    --paper:#171921;
+    --paper-2:#101219;
+    --ink:#e9e8e4;
+    --ink-soft:#a8a8ae;
+    --ink-dim:#63636b;
+    --hair:#33343d;
+    --danger:#d9848c;
+    --card:#1d1f29;
+    --key-bg:rgba(30,32,44,.55);
+    --veil:rgba(23,25,33,.55);
+    --shadow:0 18px 50px rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    transition:background 1s ease,color 1s ease;
+    overflow:hidden;
+    letter-spacing:.04em;
+  }
+
+  #sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+  .grain{
+    position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+    background-image:radial-gradient(var(--ink) .5px, transparent .5px);
+    background-size:5px 5px;
+  }
+
+  /* ============ 固定底图（p1 / p2） ============ */
+  .wallpaper{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .9s ease;}
+  .wallpaper.on{opacity:1;}
+  .wallpaper img{width:min(72vw,600px);opacity:.34;mix-blend-mode:multiply;transition:opacity 1s ease,filter 1s ease;}
+  body[data-mode="night"] .wallpaper img{filter:invert(1);opacity:.12;mix-blend-mode:screen;}
+
+  /* ============ 右上角：雪 + 音乐　左上角：昼/夜 ============ */
+  .ctrl{position:fixed;top:16px;z-index:90;display:flex;gap:9px;align-items:center;}
+  .ctrl-tl{left:16px;}
+  .ctrl-tr{right:16px;}
+  .key{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--key-bg);color:var(--ink);
+    border:1px solid var(--hair);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:transform .3s ease,background .5s ease,opacity .4s ease,color .5s ease;
+    padding:0;
+  }
+  .key:hover{transform:scale(1.08);}
+  .key.off{opacity:.4;}
+  .key.on{background:var(--ink);color:var(--paper);border-color:transparent;}
+
+  /* 昼/夜：纯 CSS 图形 */
+  .ico{position:relative;display:block;width:14px;height:14px;}
+  .ico.sun::before{content:"";position:absolute;inset:2px;border-radius:50%;border:1.2px solid currentColor;}
+  .ico.sun::after{content:"";position:absolute;width:3px;height:3px;border-radius:50%;background:currentColor;left:5.5px;top:5.5px;}
+  .ico.moon::before{content:"";position:absolute;inset:1px;border-radius:50%;background:currentColor;}
+  .ico.moon::after{content:"";position:absolute;width:11px;height:11px;border-radius:50%;background:var(--key-bg);top:-3.5px;left:4.5px;}
+  /* 雪：三线交叉 */
+  .ico.flake i{position:absolute;left:0;top:50%;width:100%;height:1px;background:currentColor;transform-origin:center;}
+  .ico.flake i:nth-child(1){transform:rotate(0deg);}
+  .ico.flake i:nth-child(2){transform:rotate(60deg);}
+  .ico.flake i:nth-child(3){transform:rotate(120deg);}
+  /* 音乐：音符 + 暂停斜线 */
+  .ico.note::before{content:"♪";position:absolute;inset:0;font-size:13px;line-height:14px;text-align:center;}
+  .ico.note::after{
+    content:"";position:absolute;left:-1px;top:8.5px;width:16px;height:1px;
+    background:currentColor;transform:rotate(-40deg);
+  }
+  .key.on .ico.note::after{display:none;}
+  .key.on .ico.note::before{animation:beat 1.6s ease-in-out infinite;}
+  @keyframes beat{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+  /* ============ 点击式翻页 ============ */
+  .page{
+    position:fixed;inset:0;z-index:10;
+    display:flex;align-items:center;justify-content:center;
+    padding:70px 24px 84px;cursor:pointer;user-select:none;
+    opacity:0;pointer-events:none;
+    transition:opacity .55s ease;
+  }
+  .page.active{opacity:1;pointer-events:auto;}
+  .inner{
+    position:relative;width:100%;max-width:720px;
+    max-height:78vh;overflow-y:auto;overscroll-behavior:contain;
+    scrollbar-width:none;
+  }
+  .inner::-webkit-scrollbar{display:none;}
+  .page.active .inner > *{animation:rise .85s cubic-bezier(.2,.7,.2,1) both;}
+  .page.active .inner > *:nth-child(1){animation-delay:.04s;}
+  .page.active .inner > *:nth-child(2){animation-delay:.12s;}
+  .page.active .inner > *:nth-child(3){animation-delay:.20s;}
+  .page.active .inner > *:nth-child(4){animation-delay:.28s;}
+  .page.active .inner > *:nth-child(5){animation-delay:.36s;}
+  .page.active .inner > *:nth-child(6){animation-delay:.44s;}
+  @keyframes rise{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:none;}}
+
+  /* ============ 封面：旋转雪晶（纯 CSS 六角晶体，无图片 / 无 SVG） ============ */
+  .cover-snow{
+    position:absolute;left:50%;top:calc(50% + 56px);
+    width:264px;height:264px;margin-left:-132px;margin-top:0;
+    z-index:1;pointer-events:none;
+    color:var(--ink);opacity:.34;
+    animation:snowSpin 36s linear infinite;
+    transition:transform 1.1s cubic-bezier(.5,0,.2,1),opacity 1.1s ease;
+  }
+  @keyframes snowSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .cover-snow::before{
+    content:"";position:absolute;inset:-28%;
+    background:radial-gradient(circle,currentColor 0%,transparent 62%);opacity:.05;
+  }
+  .cover-snow .flake{position:absolute;inset:0;}
+  /* 六条主臂 */
+  .cover-snow .arm{
+    position:absolute;left:50%;top:50%;width:1.6px;height:50%;
+    margin-left:-.8px;transform-origin:top center;
+    transform:rotate(var(--r,0deg));
+    background:linear-gradient(to bottom,currentColor 0%,currentColor 82%,transparent 100%);
+  }
+  /* 每臂三级枝杈，左右成对 */
+  .cover-snow .arm i{position:absolute;left:0;width:1.3px;height:0;}
+  .cover-snow .arm i:nth-of-type(1){bottom:70%;--len:15px;}
+  .cover-snow .arm i:nth-of-type(2){bottom:44%;--len:22px;}
+  .cover-snow .arm i:nth-of-type(3){bottom:17%;--len:29px;}
+  .cover-snow .arm i::before,
+  .cover-snow .arm i::after{
+    content:"";position:absolute;left:0;top:0;
+    width:1.3px;height:var(--len);background:currentColor;
+    transform-origin:top center;
+  }
+  .cover-snow .arm i::before{transform:rotate(38deg);}
+  .cover-snow .arm i::after{transform:rotate(-38deg);}
+  /* 臂端菱形晶体 */
+  .cover-snow .arm b{
+    position:absolute;left:50%;bottom:-5px;width:9px;height:9px;
+    transform:translateX(-50%) rotate(45deg);border:1.2px solid currentColor;
+  }
+  /* 中心六边形晶核 / 内层 / 环纹 */
+  .cover-snow .hex{
+    position:absolute;left:50%;top:50%;width:34px;height:34px;
+    transform:translate(-50%,-50%);background:currentColor;opacity:.85;
+    clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  }
+  .cover-snow .hex.h2{width:18px;height:18px;opacity:.45;}
+  .cover-snow .ring{
+    position:absolute;left:50%;top:50%;width:64px;height:64px;
+    border:1px solid currentColor;border-radius:50%;
+    transform:translate(-50%,-50%);opacity:.3;
+  }
+  body[data-mode="night"] .cover-snow{opacity:.2;}
+  .cover-veil{
+    position:absolute;inset:0;
+    background:linear-gradient(to bottom,var(--veil) 0%,rgba(0,0,0,0) 45%,var(--veil) 100%);
+    transition:opacity 1.1s ease;
+  }
+  .cover-inner{position:relative;z-index:2;text-align:center;transition:transform 1s cubic-bezier(.5,0,.2,1),opacity .9s ease;}
+  .cover-name{
+    font-family:var(--serif);font-weight:500;
+    font-size:clamp(44px,9vw,80px);letter-spacing:.42em;text-indent:.42em;
+    color:var(--ink);
+  }
+  .gone .cover-inner{transform:translateY(-42vh);opacity:0;}
+  .gone .cover-snow{animation:none;transform:translateY(-26%) scale(1.06);opacity:0;}
+  .gone .cover-veil{opacity:0;}
+
+  /* ============ 分隔装饰 ============ */
+  .orn{position:relative;max-width:440px;margin:0 auto 40px;height:20px;}
+  .orn::before{content:"";position:absolute;left:0;right:14%;top:6px;height:6px;background:var(--ink);opacity:.5;}
+  .orn::after{content:"";position:absolute;left:22%;right:0;top:13px;height:3px;background:var(--ink);opacity:.16;}
+  .orn .fl{position:absolute;left:-6px;top:-9px;font-size:12px;color:var(--ink-soft);}
+  .orn .fr{position:absolute;right:-4px;bottom:-11px;font-size:10px;color:var(--ink-soft);transform:rotate(18deg);}
+
+  /* ============ 通用排版 ============ */
+  h2{
+    font-family:var(--serif);font-weight:500;font-size:13px;
+    letter-spacing:.5em;color:var(--ink);
+    display:flex;align-items:baseline;gap:12px;margin-bottom:5px;
+  }
+  h2 .num{font-family:Georgia,serif;font-size:11px;color:var(--ink-dim);letter-spacing:.2em;}
+  h2 .en{font-family:Georgia,serif;font-size:8.5px;letter-spacing:.34em;color:var(--ink-dim);text-transform:uppercase;margin-left:auto;}
+  .h-rule{height:1px;background:var(--hair);margin:11px 0 24px;}
+  .panel{
+    background:var(--card);border:1px solid var(--hair);
+    padding:26px 26px;box-shadow:var(--shadow);
+    transition:background 1s ease,border-color 1s ease;
+  }
+
+  /* ---- 资料 ---- */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair);}
+  .cell{background:var(--paper);padding:14px;transition:background .4s ease;}
+  .cell:hover{background:var(--paper-2);}
+  .cell .k{font-size:8px;letter-spacing:.42em;color:var(--ink-dim);margin-bottom:8px;}
+  .cell .v{font-family:var(--serif);font-size:14px;letter-spacing:.14em;color:var(--ink);}
+
+  /* ---- 风格跑马灯 ---- */
+  .marquee{overflow:hidden;position:relative;padding:10px 0;}
+  .marquee .track{
+    display:inline-flex;align-items:baseline;white-space:nowrap;
+    animation:mq 30s linear infinite;will-change:transform;
+  }
+  .marquee.rev .track{animation-duration:36s;animation-direction:reverse;}
+  .mq-item{
+    font-family:var(--serif);font-size:15px;letter-spacing:.26em;
+    color:var(--ink);padding:0 22px;flex:none;
+  }
+  .mq-dot{flex:none;color:var(--ink-dim);opacity:.5;font-size:10px;align-self:center;}
+  .marquee.rev .mq-item{font-size:11.5px;color:var(--ink-soft);letter-spacing:.24em;padding:0 18px;}
+  @keyframes mq{from{transform:translateX(-50%);}to{transform:translateX(0);}}
+
+  /* ---- 风格条（价目页顶部） ---- */
+  .style-strip{margin:4px 0 2px;}
+  .style-strip .mq-item{font-size:13px;padding:0 18px;}
+  .style-strip .marquee.rev .mq-item{font-size:10.5px;padding:0 14px;}
+
+  h2 .tag{
+    margin-left:auto;font-family:var(--sans);font-size:9px;
+    letter-spacing:.28em;color:var(--ink-dim);font-weight:400;
+  }
+
+  /* ---- 价目（缩小框） ---- */
+  .price-wrap{max-width:min(340px,88vw);margin:0 auto;}
+
+  /* ---- 雪的过去：三卡围圈旋转 + 淡入淡出 ---- */
+  /* ---- 雪的过去：三卡前后重叠 + 手动切换 ---- */
+  .stack-stage{
+    position:relative;width:100%;max-width:420px;height:350px;
+    margin:10px auto 0;touch-action:pan-y;cursor:grab;
+  }
+  .stack-stage:active{cursor:grabbing;}
+  .stack{
+    position:absolute;left:50%;top:50%;width:0;height:0;
+    transition:transform .45s cubic-bezier(.2,.7,.2,1);
+  }
+  .stack .board{
+    position:absolute;left:-78px;top:-104px;
+    width:156px;aspect-ratio:3/4;cursor:pointer;
+    transition:transform .6s cubic-bezier(.2,.7,.2,1),opacity .5s ease,box-shadow .5s ease,filter 1s ease;
+  }
+  .stack .board.pos-c{transform:scale(1);opacity:1;z-index:3;}
+  .stack .board.pos-l{transform:translateX(-66px) scale(.9);opacity:.4;z-index:2;}
+  .stack .board.pos-r{transform:translateX(66px) scale(.9);opacity:.4;z-index:2;}
+  .stack .board.pos-c:hover{transform:translateY(-4px);box-shadow:var(--shadow);}
+  .stack .board.pos-l:hover{transform:translateX(-66px) scale(.9);opacity:.78;}
+  .stack .board.pos-r:hover{transform:translateX(66px) scale(.9);opacity:.78;}
+  .stack .board .tag{
+    position:absolute;left:0;right:0;bottom:12px;z-index:2;
+    text-align:center;font-family:var(--serif);
+    font-size:12px;letter-spacing:.5em;text-indent:.5em;
+    color:var(--ink);pointer-events:none;
+  }
+  body[data-mode="night"] .stack .board img{filter:invert(1) hue-rotate(180deg);}
+  .stack-dots{
+    position:absolute;left:0;right:0;bottom:2px;
+    display:flex;justify-content:center;gap:9px;pointer-events:none;
+  }
+  .stack-dots i{
+    width:5px;height:5px;border-radius:50%;background:var(--ink);
+    opacity:.18;transition:opacity .45s ease;
+  }
+  .stack-dots i.on{opacity:.7;}
+
+  /* ---- 尾声文案（昼 / 夜） ---- */
+  .epi-line{
+    font-family:var(--serif);font-size:15px;letter-spacing:.3em;color:var(--ink);
+    margin-bottom:18px;
+  }
+  .epi-night{display:none;}
+  body[data-mode="night"] .epi-day{display:none;}
+  body[data-mode="night"] .epi-night{display:block;}
+  .epi-line .gap{display:inline-block;width:1.6em;}
+
+  /* ---- 须知 ---- */
+  ol.rules{list-style:none;counter-reset:r;}
+  ol.rules li{
+    counter-increment:r;position:relative;padding:10px 4px 10px 40px;
+    border-bottom:1px solid var(--hair);font-size:12px;line-height:2;color:var(--ink);
+  }
+  ol.rules li:last-child{border-bottom:none;}
+  ol.rules li::before{
+    content:counter(r,upper-roman);position:absolute;left:2px;top:11px;
+    font-family:Georgia,serif;font-size:10.5px;color:var(--ink-dim);letter-spacing:.08em;
+  }
+  .r-red{color:var(--danger);font-weight:500;}
+  .r-gray{color:var(--ink-dim);}
+
+  /* ---- 价目 ---- */
+  .price-main{display:flex;align-items:stretch;}
+  .price-main .half{flex:1;text-align:center;padding:20px 8px;}
+  .price-main .half + .half{border-left:1px solid var(--hair);}
+  .price-main .k{font-size:8.5px;letter-spacing:.42em;color:var(--ink-dim);margin-bottom:11px;}
+  .price-main .v{font-family:var(--serif);font-size:19px;letter-spacing:.1em;color:var(--ink);}
+  .price-sub{margin-top:16px;}
+  .price-sub .row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:9px 4px;border-bottom:1px solid var(--hair);font-size:11.5px;
+  }
+  .price-sub .row:last-child{border-bottom:none;}
+  .price-sub .row .p{font-family:var(--serif);font-size:14px;letter-spacing:.1em;white-space:nowrap;}
+  .price-sub .row .note{color:var(--ink-dim);font-size:10px;margin-left:8px;}
+
+  /* ---- 板卡横向卡牌 ---- */
+  .boards{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .boards::-webkit-scrollbar{display:none;}
+  .board{
+    flex:none;width:200px;scroll-snap-align:start;
+    display:block;text-decoration:none;color:inherit;
+    background:var(--card);border:1px solid var(--hair);
+    aspect-ratio:3/4;overflow:hidden;position:relative;
+    transition:transform .4s ease,box-shadow .4s ease;
+  }
+  .board:hover{transform:translateY(-5px);box-shadow:var(--shadow);}
+  .board img{width:100%;height:100%;object-fit:cover;display:block;}
+  .board .ph{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;text-align:center;padding:14px;
+  }
+  .board.loaded .ph{display:none;}
+  .ph .bar{width:28px;height:3px;background:var(--ink);opacity:.35;}
+  .ph .bar2{width:18px;height:2px;background:var(--ink);opacity:.18;margin-top:-5px;}
+  .ph .t{font-family:var(--serif);font-size:11px;letter-spacing:.3em;color:var(--ink-soft);}
+  .ph .d{font-size:9px;letter-spacing:.14em;color:var(--ink-dim);line-height:2;}
+
+  /* ---- 尾声 ---- */
+  .epi{text-align:center;padding:20px 0 10px;}
+  .epi-mark{font-family:Georgia,serif;font-size:10px;letter-spacing:.6em;color:var(--ink-dim);margin-bottom:30px;text-indent:.6em;}
+  .epi-sign{
+    margin:0 auto;display:inline-block;
+    font-family:var(--serif);font-size:14px;letter-spacing:.6em;text-indent:.6em;color:var(--ink);
+    border-top:1px solid var(--ink);padding-top:16px;min-width:110px;
+  }
+
+  /* ============ 底部页码 / 提示 ============ */
+  .ui-foot{
+    position:fixed;left:0;right:0;bottom:20px;z-index:90;
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    font-size:9.5px;letter-spacing:.4em;color:var(--ink-dim);pointer-events:none;
+  }
+  .ui-foot #pager{font-family:Georgia,serif;}
+  .ui-foot #nextHint{opacity:.55;animation:pulse 2.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.3;}50%{opacity:.75;}}
+
+  /* 底部左右翻页按键 */
+  .nav-btn{
+    position:fixed;bottom:13px;z-index:100;
+    width:34px;height:34px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--hair);background:transparent;
+    color:var(--ink-dim);font-family:var(--serif);
+    font-size:15px;line-height:1;cursor:pointer;opacity:.55;
+    transition:opacity .3s ease,color .3s ease,transform .3s ease,border-color .3s ease;
+  }
+  .nav-btn:hover{opacity:1;color:var(--ink);}
+  .nav-prev{left:16px;}
+  .nav-next{right:16px;}
+  .nav-prev:hover{transform:translateX(-3px);}
+  .nav-next:hover{transform:translateX(3px);}
+
+  /* 风格页退出时向上移 */
+  #p2{transition:opacity .55s ease,transform .9s cubic-bezier(.5,0,.2,1);}
+  #p2:not(.active){transform:translateY(-46vh);}
+
+  /* ============ 响应式 ============ */
+  @media (max-width:680px){
+    .grid{grid-template-columns:repeat(2,1fr);}
+    .panel{padding:20px 16px;}
+    ol.rules li{padding-left:32px;font-size:11.5px;}
+    .cover-snow{width:190px;height:190px;margin-left:-95px;top:calc(50% + 46px);}
+    .stack-stage{height:300px;}
+    .stack .board{left:-64px;top:-86px;width:128px;}
+    .stack .board.pos-l{transform:translateX(-54px) scale(.9);}
+    .stack .board.pos-r{transform:translateX(54px) scale(.9);}
+    .stack .board.pos-l:hover{transform:translateX(-54px) scale(.9);}
+    .stack .board.pos-r:hover{transform:translateX(54px) scale(.9);}
+    .page{padding:64px 18px 76px;}
+    .inner{max-height:74vh;}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body data-mode="day">
+
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- 固定底图：p1 / p2（白底黑字，multiply 融入纸面） -->
+<div class="wallpaper" aria-hidden="true">
+  <img src="images/bg-tree.jpg" alt="" onerror="this.remove()">
+</div>
+
+<!-- 左上角：昼 / 夜 -->
+<div class="ctrl ctrl-tl">
+  <button class="key" id="modeBtn" aria-label="昼夜" title="昼 / 夜">
+    <span class="ico moon" id="modeIco"></span>
+  </button>
+</div>
+
+<!-- 右上角：落雪 + 音乐 -->
+<div class="ctrl ctrl-tr">
+  <button class="key on" id="snowBtn" aria-label="落雪开关" title="落雪 开 / 关">
+    <span class="ico flake"><i></i><i></i><i></i></span>
+  </button>
+  <button class="key" id="musicBtn" aria-label="音乐" title="音乐 播放 / 暂停">
+    <span class="ico note"></span>
+  </button>
+</div>
+
+<audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+
+<main>
+
+  <!-- 01 封面 -->
+  <section class="page active" id="p0">
+    <div class="cover-snow" aria-hidden="true">
+      <div class="flake">
+        <span class="arm" style="--r:0deg"><i></i><i></i><i></i><b></b></span>
+        <span class="arm" style="--r:60deg"><i></i><i></i><i></i><b></b></span>
+        <span class="arm" style="--r:120deg"><i></i><i></i><i></i><b></b></span>
+        <span class="arm" style="--r:180deg"><i></i><i></i><i></i><b></b></span>
+        <span class="arm" style="--r:240deg"><i></i><i></i><i></i><b></b></span>
+        <span class="arm" style="--r:300deg"><i></i><i></i><i></i><b></b></span>
+        <span class="ring"></span>
+        <span class="hex"></span><span class="hex h2"></span>
+      </div>
+    </div>
+    <div class="cover-veil"></div>
+    <div class="cover-inner">
+      <h1 class="cover-name">陳引</h1>
+    </div>
+  </section>
+
+  <!-- 02 雪的成分 -->
+  <section class="page" id="p1">
+    <div class="inner">
+      <h2><span class="num">Ⅰ</span>雪 的 成 分</h2>
+      <div class="h-rule"></div>
+      <div class="grid">
+        <div class="cell"><div class="k">姓 名</div><div class="v">陳引</div></div>
+        <div class="cell"><div class="k">性 别</div><div class="v">女</div></div>
+        <div class="cell"><div class="k">属 性</div><div class="v">Le-h</div></div>
+        <div class="cell"><div class="k">M B T I</div><div class="v">INTP</div></div>
+        <div class="cell"><div class="k">几 无</div><div class="v">稳定八无</div></div>
+        <div class="cell"><div class="k">星 座</div><div class="v">白羊</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 风格 -->
+  <section class="page" id="p2">
+    <div class="inner">
+      <h2><span class="num">Ⅱ</span>风 格 <span class="en">Style</span></h2>
+      <div class="h-rule"></div>
+      <div class="marquee">
+        <div class="track" id="trackMain">
+          <span class="mq-item">白话</span><span class="mq-dot">·</span>
+          <span class="mq-item">剖析</span><span class="mq-dot">·</span>
+          <span class="mq-item">引导</span><span class="mq-dot">·</span>
+          <span class="mq-item">中高恋</span><span class="mq-dot">·</span>
+          <span class="mq-item">低共情</span><span class="mq-dot">·</span>
+          <span class="mq-item">温柔刀</span><span class="mq-dot">·</span>
+          <span class="mq-item">高感知</span><span class="mq-dot">·</span>
+          <span class="mq-item">治愈虐</span><span class="mq-dot">·</span>
+        </div>
+      </div>
+      <div class="marquee rev">
+        <div class="track" id="trackSub">
+          <span class="mq-item">微文</span><span class="mq-dot">·</span>
+          <span class="mq-item">微贬</span><span class="mq-dot">·</span>
+          <span class="mq-item">自虐自剖</span><span class="mq-dot">·</span>
+          <span class="mq-item">低无</span><span class="mq-dot">·</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 价目（风格置于顶部） -->
+  <section class="page" id="p3">
+    <div class="inner">
+      <div class="style-strip">
+        <div class="marquee">
+          <div class="track">
+            <span class="mq-item">白话</span><span class="mq-dot">·</span>
+            <span class="mq-item">剖析</span><span class="mq-dot">·</span>
+            <span class="mq-item">引导</span><span class="mq-dot">·</span>
+            <span class="mq-item">中高恋</span><span class="mq-dot">·</span>
+            <span class="mq-item">低共情</span><span class="mq-dot">·</span>
+            <span class="mq-item">温柔刀</span><span class="mq-dot">·</span>
+            <span class="mq-item">高感知</span><span class="mq-dot">·</span>
+            <span class="mq-item">治愈虐</span><span class="mq-dot">·</span>
+          </div>
+        </div>
+        <div class="marquee rev">
+          <div class="track">
+            <span class="mq-item">微文</span><span class="mq-dot">·</span>
+            <span class="mq-item">微贬</span><span class="mq-dot">·</span>
+            <span class="mq-item">自虐自剖</span><span class="mq-dot">·</span>
+            <span class="mq-item">低无</span><span class="mq-dot">·</span>
+          </div>
+        </div>
+      </div>
+      <div class="h-rule"></div>
+      <h2><span class="num">Ⅲ</span>价 目<span class="tag">随缘接单 · 半夜居多</span></h2>
+      <div class="h-rule"></div>
+      <div class="price-wrap">
+        <div class="panel price-main">
+          <div class="half">
+            <div class="k">小 时</div>
+            <div class="v">42 / h</div>
+          </div>
+          <div class="half">
+            <div class="k">半 小 时</div>
+            <div class="v">22 / 0.5h</div>
+          </div>
+        </div>
+        <div class="panel price-sub">
+          <div class="row"><span>凌晨<span class="note">(十二点后)</span></span><span class="p">+5</span></div>
+          <div class="row"><span>卡装扮</span><span class="p">+3</span></div>
+          <div class="row"><span>两点后</span><span class="p">+8</span></div>
+          <div class="row"><span>卡风格<span class="note">不保证能接好</span></span><span class="p">+3</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 下单须知 -->
+  <section class="page" id="p4">
+    <div class="inner">
+      <h2><span class="num">Ⅳ</span>下 单 须 知 <span class="en">Notices</span></h2>
+      <div class="h-rule"></div>
+      <ol class="rules">
+        <li class="r-red">于单前默认已读</li>
+        <li class="r-gray">le不拒男但请提前说明 · 习惯用「妳」</li>
+        <li>勿在未告知前提下以截图 / 录屏 / 直播等方式传播</li>
+        <li>旁观禁言 | 禁靠近 | 禁吵闹</li>
+        <li>喜点雷点请提前说明 / 提供板卡；暗踩雷、未提前说明，不是我的责任</li>
+        <li>若在此过程中有任何不适的情况，可以直接让我滚</li>
+        <li>非特殊情况一般不会主动大幅涉三，如若出现，事后不接受此理由客诉</li>
+        <li>禁单口 / 只回「嗯」「噢」等敷衍回答，有权提前结束 / 转普，并结单照常</li>
+        <li>可提前预约，默认先付，不接受口头预约，存单超过 14 天（两周）默认送单</li>
+        <li>不要披马甲点单 —— 仅接受自带价</li>
+        <li>低无 | 高恋均不默认恋人</li>
+        <li>如果妳的生活幸福美满，纯属因为好奇而来点的虐，那为了妳的体验请略过我选择其他人 —— 因为我接不好 ovo</li>
+        <li>如果是情感淡漠，我们可能只能进行 deeptalk 或者闲聊了</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 06 板卡 · 雪的过去 -->
+  <section class="page" id="p5">
+    <div class="inner">
+      <h2><span class="num">Ⅴ</span>雪 的 过 去 <span class="en">Boards</span></h2>
+      <div class="h-rule"></div>
+      <div class="stack-stage">
+        <div class="stack">
+          <a class="board b1" href="https://www.kdocs.cn/l/chIgc5VBmsjR" target="_blank" rel="noopener" title="陳引の话术_随笔">
+            <img src="images/tree.jpg" alt="" onload="this.parentNode.classList.add('loaded')" onerror="this.remove()">
+            <div class="tag">话 术</div>
+            <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 一</div><div class="d">images/tree.jpg</div></div>
+          </a>
+          <a class="board b2" href="https://www.kdocs.cn/l/cbL35bxz1WDz" target="_blank" rel="noopener" title="引の板评">
+            <img src="images/tree.jpg" alt="" onload="this.parentNode.classList.add('loaded')" onerror="this.remove()">
+            <div class="tag">板 评</div>
+            <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 二</div><div class="d">images/tree.jpg</div></div>
+          </a>
+          <a class="board b3" href="https://www.kdocs.cn/l/cnhr3LrD41ja" target="_blank" rel="noopener" title="引の卡">
+            <img src="images/tree.jpg" alt="" onload="this.parentNode.classList.add('loaded')" onerror="this.remove()">
+            <div class="tag">卡 类</div>
+            <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 三</div><div class="d">images/tree.jpg</div></div>
+          </a>
+        </div>
+        <div class="stack-dots"><i class="on"></i><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 尾声 -->
+  <section class="page" id="p6">
+    <div class="inner">
+      <div class="orn" style="margin:20px auto 40px;"><span class="fl">❋</span><span class="fr">❋</span></div>
+      <div class="epi">
+        <div class="epi-mark">— 尾 声 —</div>
+        <p class="epi-line epi-day">别离后<span class="gap"></span>每日雪</p>
+        <p class="epi-line epi-night">故事末篇，半轮明月，半截雪</p>
+        <div class="epi-sign">陳 引</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="ui-foot">
+  <span id="pager">01 / 07</span>
+  <span id="nextHint">点击继续</span>
+</div>
+
+<button class="nav-btn nav-prev" id="navPrev" type="button" aria-label="上一页">←</button>
+<button class="nav-btn nav-next" id="navNext" type="button" aria-label="下一页">→</button>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- 点击式翻页 ---------------- */
+  var pages = Array.prototype.slice.call(document.querySelectorAll(".page"));
+  var pager = document.getElementById("pager");
+  var hint = document.getElementById("nextHint");
+  var idx = 0, cover = document.getElementById("p0");
+  var autoTimer = null;
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+
+  function show(i) {
+    if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+    pages.forEach(function (p, k) { p.classList.toggle("active", k === i); });
+    idx = i;
+    pager.textContent = pad(i + 1) + " / " + pad(pages.length);
+    hint.textContent = i === pages.length - 1 ? "回到开头" : "点击继续";
+    /* 封面：进入后上滑消散，回到封面时复位 */
+    cover.classList.toggle("gone", i !== 0);
+    /* 底图：封面隐藏，第二页起显示 */
+    var wp = document.querySelector(".wallpaper");
+    if (wp) wp.classList.toggle("on", i >= 1);
+    /* 风格页展示约 5 秒后自动向上移，进入价目页 */
+    if (i === 2) {
+      autoTimer = setTimeout(function () { if (idx === 2) show(3); }, 5000);
+    }
+  }
+
+  pages.forEach(function (p, k) {
+    p.addEventListener("click", function () {
+      show(k === pages.length - 1 ? 0 : k + 1);
+    });
+  });
+
+  /* 底部左右按键：上一页 / 下一页（循环） */
+  function navGo(d) { show((idx + d + pages.length) % pages.length); }
+  ["navPrev", "navNext"].forEach(function (id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      navGo(id === "navPrev" ? -1 : 1);
+    });
+  });
+  /* 叠卡：手动切换（点两侧露出的一张）/ 中间卡走自身链接 */
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".stack .board"));
+  var dots = Array.prototype.slice.call(document.querySelectorAll(".stack-dots i"));
+  var cur = 0, cardTimer = null;
+
+  function renderCards() {
+    cards.forEach(function (c, k) {
+      c.classList.remove("pos-c", "pos-l", "pos-r");
+      var rel = (k - cur + cards.length) % cards.length;
+      c.classList.add(rel === 0 ? "pos-c" : (rel === 1 ? "pos-r" : "pos-l"));
+    });
+    dots.forEach(function (d, k) { d.classList.toggle("on", k === cur); });
+  }
+  function goCard(n) { cur = (n + cards.length) % cards.length; renderCards(); resetCardTimer(); }
+  function resetCardTimer() {
+    if (cardTimer) clearInterval(cardTimer);
+    cardTimer = setInterval(function () { goCard(cur + 1); }, 6000);
+  }
+  var stage = document.querySelector(".stack-stage");
+  var stackEl = document.querySelector(".stack");
+  var dragging = false, startX = 0, dragX = 0, moved = false;
+
+  function dragStart(e) {
+    dragging = true; moved = false; startX = e.clientX; dragX = 0;
+    stackEl.style.transition = "none";
+    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+  function dragMove(e) {
+    if (!dragging) return;
+    dragX = e.clientX - startX;
+    if (Math.abs(dragX) > 8) moved = true;
+    stackEl.style.transform = "translateX(" + (dragX * 0.4) + "px)";
+  }
+  function dragEnd() {
+    if (!dragging) return;
+    dragging = false;
+    stackEl.style.transition = "transform .45s cubic-bezier(.2,.7,.2,1)";
+    if (Math.abs(dragX) > 45) goCard(dragX < 0 ? cur + 1 : cur - 1); /* 左划→下一张 */
+    stackEl.style.transform = "translateX(0)";
+  }
+  if (stage) {
+    stage.addEventListener("pointerdown", dragStart);
+    stage.addEventListener("pointermove", dragMove);
+    stage.addEventListener("pointerup", dragEnd);
+    stage.addEventListener("pointercancel", dragEnd);
+    stage.addEventListener("pointerleave", function () { if (dragging) dragEnd(); });
+  }
+
+  cards.forEach(function (c, k) {
+    c.addEventListener("click", function (e) {
+      e.stopPropagation();                    /* 不触发整页翻页 */
+      if (moved) { e.preventDefault(); moved = false; return; } /* 划动不误触 */
+      var rel = (k - cur + cards.length) % cards.length;
+      if (rel === 0) return;                  /* 中间那张：走 href 跳转 */
+      e.preventDefault();
+      goCard(rel === 1 ? cur + 1 : cur - 1);  /* 点右露边→下一张；左露边→上一张 */
+    });
+  });
+  renderCards();
+  resetCardTimer();
+
+  show(0);
+
+  /* ---------------- 昼夜（左上） ---------------- */
+  var body = document.body;
+  var modeBtn = document.getElementById("modeBtn");
+  var modeIco = document.getElementById("modeIco");
+  var mode = "day";
+
+  function setMode(m) {
+    mode = m;
+    body.setAttribute("data-mode", m);
+    modeIco.className = "ico " + (m === "day" ? "moon" : "sun");
+    Sky.setMode(m);
+    try { localStorage.setItem("cy-mode", m); } catch (e) {}
+  }
+  modeBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    setMode(mode === "day" ? "night" : "day");
+  });
+
+  /* ---------------- 落雪开关（右上） ---------------- */
+  var snowBtn = document.getElementById("snowBtn");
+  var snowOn = true;
+  snowBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    snowOn = !snowOn;
+    snowBtn.classList.toggle("on", snowOn);
+    snowBtn.classList.toggle("off", !snowOn);
+    Sky.setSnow(snowOn);
+  });
+
+  /* ---------------- 音乐（右上） ---------------- */
+  var musicBtn = document.getElementById("musicBtn");
+  var bgm = document.getElementById("bgm");
+  bgm.volume = 0.55;
+  musicBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (bgm.paused) {
+      var pr = bgm.play();
+      if (pr && pr.catch) pr.catch(function () {});
+      musicBtn.classList.add("on");
+    } else {
+      bgm.pause();
+      musicBtn.classList.remove("on");
+    }
+  });
+
+  /* ---------------- 跑马灯无缝循环 ---------------- */
+  Array.prototype.forEach.call(document.querySelectorAll(".marquee .track"), function (t) {
+    t.innerHTML += t.innerHTML + t.innerHTML + t.innerHTML;
+  });
+
+  /* ---------------- 背景：雪 / 星 / 极光 ---------------- */
+  var Sky = (function () {
+    var cv = document.getElementById("sky");
+    var ctx = cv.getContext("2d");
+    var W = 0, H = 0, DPR = 1, m = "day", hasSnow = true;
+    var snow = [], stars = [], bands = [], meteors = [];
+
+    function rand(a, b) { return a + Math.random() * (b - a); }
+
+    function resize() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; H = window.innerHeight;
+      cv.width = W * DPR; cv.height = H * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      build();
+    }
+
+    function build() {
+      var i;
+      snow = [];
+      var sc = Math.round(Math.min(180, (W * H) / 8500));
+      for (i = 0; i < sc; i++) {
+        snow.push({
+          x: rand(0, W), y: rand(-H, H), r: rand(0.7, 2.3),
+          sp: rand(22, 70), sw: rand(0.12, 0.5),
+          ph: rand(0, 6.28), a: rand(0.28, 0.85)
+        });
+      }
+      stars = [];
+      var tc = Math.round(Math.min(200, (W * H) / 7500));
+      for (i = 0; i < tc; i++) {
+        stars.push({
+          x: rand(0, W), y: rand(0, H * 0.9), r: rand(0.4, 1.4),
+          ph: rand(0, 6.28), sp: rand(0.5, 1.8), tw: rand(0.2, 0.6)
+        });
+      }
+      bands = [];
+      for (i = 0; i < 2; i++) {
+        bands.push({
+          y: H * rand(0.14, 0.34), amp: rand(24, 46),
+          f: rand(0.004, 0.008), sp: rand(0.1, 0.22),
+          ph: rand(0, 6.28), h: rand(160, 280),
+          c: i === 0 ? "150,160,200" : "180,160,205"
+        });
+      }
+      meteors = [];
+    }
+
+    function drawSnow(t, dt) {
+      ctx.save();
+      for (var i = 0; i < snow.length; i++) {
+        var s = snow[i];
+        s.y += s.sp * dt;
+        var x = s.x + Math.sin(t * s.sw + s.ph) * 20;
+        if (s.y > H + 8) { s.y = rand(-40, -6); s.x = rand(0, W); }
+        ctx.globalAlpha = s.a;
+        ctx.fillStyle = m === "day" ? "#b4b4b8" : "#e6e6ec";
+        ctx.beginPath();
+        ctx.arc(x, s.y, s.r, 0, 6.283);
+        ctx.fill();
+        if (s.r > 1.8) {
+          ctx.globalAlpha = s.a * 0.3;
+          ctx.beginPath();
+          ctx.arc(x, s.y, s.r * 2.4, 0, 6.283);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawStars(t) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        ctx.globalAlpha = 0.2 + s.tw * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph));
+        ctx.fillStyle = "#dfe1ea";
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, 6.283);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function yAt(b, top, x, t) {
+      return top + Math.sin(x * b.f + t * 0.3 + b.ph) * b.amp
+                  + Math.sin(x * b.f * 2.6 - t * 0.18) * b.amp * 0.3;
+    }
+
+    function drawAurora(t) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (var i = 0; i < bands.length; i++) {
+        var b = bands[i];
+        var top = b.y + Math.sin(t * b.sp + b.ph) * 20;
+        var g = ctx.createLinearGradient(0, top - 30, 0, top + b.h);
+        g.addColorStop(0, "rgba(" + b.c + ",0)");
+        g.addColorStop(0.4, "rgba(" + b.c + ",0.09)");
+        g.addColorStop(1, "rgba(" + b.c + ",0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        var x, step = 28;
+        ctx.moveTo(-50, yAt(b, top, -50, t));
+        for (x = -50; x <= W + 50; x += step) ctx.lineTo(x, yAt(b, top, x, t));
+        for (x = W + 50; x >= -50; x -= step) ctx.lineTo(x, yAt(b, top, x, t) + b.h);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawMeteors(t, dt) {
+      if (Math.random() < dt * 0.2) {
+        meteors.push({ x: rand(W * 0.2, W), y: rand(-30, H * 0.3), v: rand(320, 540), life: 0, max: rand(0.7, 1.1), len: rand(60, 120) });
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (var i = meteors.length - 1; i >= 0; i--) {
+        var mt = meteors[i];
+        mt.life += dt; mt.x -= mt.v * dt; mt.y += mt.v * 0.4 * dt;
+        if (mt.life > mt.max || mt.y > H + 40) { meteors.splice(i, 1); continue; }
+        var f = 1 - mt.life / mt.max;
+        var g = ctx.createLinearGradient(mt.x, mt.y, mt.x + mt.len, mt.y - mt.len * 0.4);
+        g.addColorStop(0, "rgba(235,235,245," + (0.6 * f) + ")");
+        g.addColorStop(1, "rgba(235,235,245,0)");
+        ctx.strokeStyle = g; ctx.lineWidth = 1.3; ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(mt.x, mt.y);
+        ctx.lineTo(mt.x + mt.len, mt.y - mt.len * 0.4);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    var last = 0;
+    function loop(now) {
+      var t = now / 1000;
+      var dt = Math.min(0.05, last ? t - last : 0.016);
+      last = t;
+      ctx.clearRect(0, 0, W, H);
+      if (m === "day") {
+        if (hasSnow) drawSnow(t, dt);
+      } else {
+        drawAurora(t);
+        drawStars(t);
+        drawMeteors(t, dt);
+        if (hasSnow) drawSnow(t, dt * 0.55);
+      }
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", function () { setTimeout(resize, 200); });
+
+    return {
+      init: function () { resize(); requestAnimationFrame(loop); },
+      setMode: function (v) { m = v; meteors = []; },
+      setSnow: function (v) { hasSnow = v; }
+    };
+  })();
+
+  /* ---------------- 启动 ---------------- */
+  var saved = null;
+  try { saved = localStorage.getItem("cy-mode"); } catch (e) {}
+  setMode(saved || "day");
+  Sky.init();
+})();
+</script>
+</body>
+</html>
