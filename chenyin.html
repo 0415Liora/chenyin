@@ -350,16 +350,16 @@
     text-shadow:0 1px 7px var(--paper),0 0 3px var(--paper);
   }
   body[data-mode="night"] .flat-stage .board .spin img{filter:invert(1) hue-rotate(180deg);}
-  /* ---- 雪的过去：下方一片雪花，点击显示常驻 ---- */
-  .ever{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px auto 0;}
-  .ever-btn{
-    width:44px;height:44px;display:flex;align-items:center;justify-content:center;
-    background:transparent;border:0;padding:0;cursor:pointer;
-    opacity:.62;transition:opacity .3s ease,transform .4s ease;
+  /* ---- 雪的过去：常驻常显于页面底部（无方框，雪花在左） ---- */
+  .ever{
+    position:absolute;left:0;right:0;bottom:54px;z-index:12;
+    display:flex;align-items:center;justify-content:center;gap:16px;
+    pointer-events:none;
   }
-  .ever-btn:hover{opacity:1;transform:rotate(24deg);}
+  #p5 .inner{padding-bottom:70px;}
   .mini-flake{
-    position:relative;display:block;width:32px;height:32px;color:var(--ink-soft);
+    position:relative;display:block;width:28px;height:28px;flex:none;
+    color:var(--ink-soft);opacity:.7;
     animation:snowSpin 26s linear infinite;
   }
   .mini-flake i{
@@ -376,17 +376,10 @@
     content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;
     border-radius:50%;background:currentColor;transform:translate(-50%,-50%);
   }
-  /* 常驻：点击雪花后在按钮附近生成一个简约方框（配色随主题） */
-  .ever-panel{
-    width:210px;margin-top:2px;padding:12px 14px;
-    background:var(--card);border:1px solid var(--hair);
-    max-height:0;opacity:0;overflow:hidden;
-    transition:max-height .5s ease,opacity .45s ease;
-  }
-  .ever.on .ever-panel{max-height:90px;opacity:1;}
-  .ever-k{display:block;font-size:9px;letter-spacing:.5em;color:var(--ink-dim);margin-bottom:8px;}
-  .ever-v{display:block;font-family:var(--serif);font-size:12px;letter-spacing:.08em;line-height:1.9;color:var(--ink);}
-  .ever-v em{font-style:normal;color:var(--ink-dim);margin:0 4px;}
+  .ever-txt{display:flex;flex-direction:column;gap:5px;}
+  .ever-k{display:block;font-size:8.5px;letter-spacing:.5em;color:var(--ink-dim);}
+  .ever-v{display:block;font-family:var(--serif);font-size:12px;letter-spacing:.12em;line-height:1.6;color:var(--ink);}
+  .ever-v em{font-style:normal;color:var(--ink-dim);margin:0 5px;}
 
   /* ---- 尾声文案（昼 / 夜） ---- */
   .epi-line{
@@ -498,6 +491,8 @@
     .flake-nav{--nav-r:116px;}
     .petal-txt{font-size:9px;padding:4px 6px;letter-spacing:.06em;}
     .flat-stage{height:min(54vh,390px);}
+    .ever{gap:12px;bottom:50px;}
+    .ever-v{font-size:11px;letter-spacing:.06em;}
     .flat-stage .board.b1{width:37%;}
     .flat-stage .board.b2{width:35%;}
     .flat-stage .board.b3{width:39%;left:28%;}
@@ -710,14 +705,12 @@
           <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 三</div><div class="d">images/flake-3.jpg</div></div>
         </a>
       </div>
-      <div class="ever" id="ever">
-        <button class="ever-btn" id="everBtn" type="button" aria-label="常驻设定">
-          <span class="mini-flake"><i style="--r:0deg"></i><i style="--r:60deg"></i><i style="--r:120deg"></i></span>
-        </button>
-        <div class="ever-panel">
-          <span class="ever-k">常 驻</span>
-          <span class="ever-v">羽毛枭 <em>|</em> 花环 <em>|</em> 初始</span>
-        </div>
+    </div>
+    <div class="ever">
+      <span class="mini-flake" aria-hidden="true"><i style="--r:0deg"></i><i style="--r:60deg"></i><i style="--r:120deg"></i></span>
+      <div class="ever-txt">
+        <span class="ever-k">常 驻</span>
+        <span class="ever-v">羽毛枭 <em>|</em> 花环 <em>|</em> 初始</span>
       </div>
     </div>
   </section>
@@ -820,21 +813,6 @@
   Array.prototype.forEach.call(document.querySelectorAll(".flat-stage .board"), function (b) {
     b.addEventListener("click", function (e) { e.stopPropagation(); });
   });
-  /* 点击下方雪花 → 展开「常驻」 */
-  var ever = document.getElementById("ever");
-  var everBtn = document.getElementById("everBtn");
-  if (ever && everBtn) {
-    everBtn.addEventListener("click", function (e) {
-      e.stopPropagation();                 /* 不触发整页翻页 */
-      ever.classList.toggle("on");
-    });
-    var everPanel = ever.querySelector(".ever-panel");
-    if (everPanel) everPanel.addEventListener("click", function (e) {
-      e.stopPropagation();                 /* 点方框本身可收起 */
-      ever.classList.remove("on");
-    });
-  }
-
   /* 封面：文字如雪花飘落（liora / pity / Snow / Meet） */
   var fall = document.getElementById("coverFall");
   if (fall) {
