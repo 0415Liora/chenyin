@@ -278,44 +278,45 @@
   /* ---- 价目（缩小框） ---- */
   .price-wrap{max-width:min(340px,88vw);margin:0 auto;}
 
-  /* ---- 雪的过去：三卡围圈旋转 + 淡入淡出 ---- */
-  /* ---- 雪的过去：三卡前后重叠 + 手动切换 ---- */
-  .stack-stage{
-    position:relative;width:100%;max-width:420px;height:350px;
-    margin:10px auto 0;touch-action:pan-y;cursor:grab;
+  /* ---- 雪的过去：三卡不规则铺平 + 雪花自转 ---- */
+  .flat-stage{
+    position:relative;width:100%;max-width:620px;height:min(58vh,460px);
+    margin:8px auto 0;
   }
-  .stack-stage:active{cursor:grabbing;}
-  .stack{
-    position:absolute;left:50%;top:50%;width:0;height:0;
-    transition:transform .45s cubic-bezier(.2,.7,.2,1);
+  .flat-stage .board{
+    position:absolute;width:31%;aspect-ratio:3/4;cursor:pointer;opacity:.94;
+    transform:rotate(var(--tilt,0deg));
+    animation:cardSway var(--sway,16s) ease-in-out infinite alternate;
+    transition:box-shadow .45s ease,opacity .45s ease;
   }
-  .stack .board{
-    position:absolute;left:-78px;top:-104px;
-    width:156px;aspect-ratio:3/4;cursor:pointer;
-    transition:transform .6s cubic-bezier(.2,.7,.2,1),opacity .5s ease,box-shadow .5s ease,filter 1s ease;
+  .flat-stage .board.b1{left:2%;top:1%;--tilt:-9deg;--sway:17s;}
+  .flat-stage .board.b2{right:2%;top:15%;--tilt:8deg;--sway:21s;}
+  .flat-stage .board.b3{left:32%;bottom:1%;--tilt:-4deg;--sway:19s;}
+  @keyframes cardSway{
+    from{transform:rotate(calc(var(--tilt,0deg) - 3deg));}
+    to{transform:rotate(calc(var(--tilt,0deg) + 3deg));}
   }
-  .stack .board.pos-c{transform:scale(1);opacity:1;z-index:3;}
-  .stack .board.pos-l{transform:translateX(-66px) scale(.9);opacity:.4;z-index:2;}
-  .stack .board.pos-r{transform:translateX(66px) scale(.9);opacity:.4;z-index:2;}
-  .stack .board.pos-c:hover{transform:translateY(-4px);box-shadow:var(--shadow);}
-  .stack .board.pos-l:hover{transform:translateX(-66px) scale(.9);opacity:.78;}
-  .stack .board.pos-r:hover{transform:translateX(66px) scale(.9);opacity:.78;}
-  .stack .board .tag{
-    position:absolute;left:0;right:0;bottom:12px;z-index:2;
+  .flat-stage .board:hover{opacity:1;box-shadow:var(--shadow);z-index:5;animation-play-state:paused;}
+  .flat-stage .board .spin{
+    position:absolute;left:50%;top:50%;width:140%;height:140%;
+    transform:translate(-50%,-50%);pointer-events:none;
+    animation:flakeSpin var(--dur,44s) linear infinite;
+  }
+  .flat-stage .board.b1 .spin{--dur:48s;}
+  .flat-stage .board.b2 .spin{--dur:36s;animation-direction:reverse;}
+  .flat-stage .board.b3 .spin{--dur:58s;}
+  @keyframes flakeSpin{
+    from{transform:translate(-50%,-50%) rotate(0deg);}
+    to{transform:translate(-50%,-50%) rotate(360deg);}
+  }
+  .flat-stage .board .tag{
+    position:absolute;left:0;right:0;bottom:10px;z-index:2;
     text-align:center;font-family:var(--serif);
     font-size:12px;letter-spacing:.5em;text-indent:.5em;
     color:var(--ink);pointer-events:none;
+    text-shadow:0 1px 7px var(--paper),0 0 3px var(--paper);
   }
-  body[data-mode="night"] .stack .board img{filter:invert(1) hue-rotate(180deg);}
-  .stack-dots{
-    position:absolute;left:0;right:0;bottom:2px;
-    display:flex;justify-content:center;gap:9px;pointer-events:none;
-  }
-  .stack-dots i{
-    width:5px;height:5px;border-radius:50%;background:var(--ink);
-    opacity:.18;transition:opacity .45s ease;
-  }
-  .stack-dots i.on{opacity:.7;}
+  body[data-mode="night"] .flat-stage .board .spin img{filter:invert(1) hue-rotate(180deg);}
   /* ---- 雪的过去：下方一片雪花，点击显示常驻 ---- */
   .ever{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px auto 0;}
   .ever-btn{
@@ -342,15 +343,40 @@
     content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;
     border-radius:50%;background:currentColor;transform:translate(-50%,-50%);
   }
+  /* 常驻便利贴：固定屏幕左下角，不进入卡牌区域 */
+  .page.active .inner > .ever{animation:none;}   /* 避免 transform 影响 fixed 定位 */
   .ever-panel{
-    display:flex;flex-direction:column;align-items:center;gap:9px;
-    max-height:0;opacity:0;overflow:hidden;
-    transition:max-height .55s ease,opacity .55s ease;
+    position:fixed;left:16px;bottom:64px;z-index:95;
+    width:198px;padding:16px 16px 18px;
+    background:#f7f1d9;color:#4a4636;
+    box-shadow:0 10px 24px rgba(60,55,35,.22),0 2px 6px rgba(0,0,0,.08);
+    transform-origin:left bottom;
+    transform:translateY(14px) rotate(-3deg) scale(.94);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .4s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility .4s;
   }
-  .ever.on .ever-panel{max-height:90px;opacity:1;}
-  .ever-k{font-size:9px;letter-spacing:.5em;text-indent:.5em;color:var(--ink-dim);}
-  .ever-v{font-family:var(--serif);font-size:13px;letter-spacing:.2em;color:var(--ink);}
-  .ever-v em{font-style:normal;color:var(--hair);margin:0 9px;}
+  /* 顶部胶带 + 右下折角（纯 CSS） */
+  .ever-panel::before{
+    content:"";position:absolute;left:50%;top:-9px;width:56px;height:18px;
+    transform:translateX(-50%) rotate(-4deg);
+    background:rgba(255,255,255,.55);box-shadow:0 1px 2px rgba(0,0,0,.06);
+  }
+  .ever-panel::after{
+    content:"";position:absolute;right:0;bottom:0;width:18px;height:18px;
+    background:linear-gradient(135deg,rgba(0,0,0,.10) 0%,rgba(0,0,0,.10) 49%,rgba(255,255,255,.5) 50%);
+  }
+  .ever.on .ever-panel{
+    opacity:1;visibility:visible;pointer-events:auto;
+    transform:translateY(0) rotate(-3deg) scale(1);
+  }
+  .ever-k{display:block;font-size:9px;letter-spacing:.5em;color:#9a8f70;margin-bottom:9px;}
+  .ever-v{display:block;font-family:var(--serif);font-size:12px;letter-spacing:.08em;line-height:1.9;color:#4a4636;}
+  .ever-v em{font-style:normal;color:#c2b48c;margin:0 4px;}
+  body[data-mode="night"] .ever-panel{background:#4b4962;color:#f0eef7;box-shadow:0 10px 26px rgba(0,0,0,.35);}
+  body[data-mode="night"] .ever-k{color:#a9a6c0;}
+  body[data-mode="night"] .ever-v{color:#f0eef7;}
+  body[data-mode="night"] .ever-v em{color:#8b89a8;}
+  body[data-mode="night"] .ever-panel::before{background:rgba(255,255,255,.18);}
 
   /* ---- 尾声文案（昼 / 夜） ---- */
   .epi-line{
@@ -458,12 +484,10 @@
     .panel{padding:20px 16px;}
     ol.rules li{padding-left:32px;font-size:11.5px;}
     .cover-snow{width:190px;height:190px;margin-left:-95px;top:calc(50% - 172px);}
-    .stack-stage{height:300px;}
-    .stack .board{left:-64px;top:-86px;width:128px;}
-    .stack .board.pos-l{transform:translateX(-54px) scale(.9);}
-    .stack .board.pos-r{transform:translateX(54px) scale(.9);}
-    .stack .board.pos-l:hover{transform:translateX(-54px) scale(.9);}
-    .stack .board.pos-r:hover{transform:translateX(54px) scale(.9);}
+    .flat-stage{height:min(54vh,390px);}
+    .flat-stage .board.b1{width:37%;}
+    .flat-stage .board.b2{width:35%;}
+    .flat-stage .board.b3{width:39%;left:28%;}
     .page{padding:64px 18px 76px;}
     .inner{max-height:74vh;}
   }
@@ -645,25 +669,22 @@
     <div class="inner">
       <h2><span class="num">Ⅴ</span>雪 的 过 去 <span class="en">Boards</span></h2>
       <div class="h-rule"></div>
-      <div class="stack-stage">
-        <div class="stack">
-          <a class="board b1" href="https://www.kdocs.cn/l/chIgc5VBmsjR" target="_blank" rel="noopener" title="陳引の话术_随笔">
-            <img src="images/tree.jpg" alt="" onload="this.parentNode.classList.add('loaded')" onerror="this.remove()">
-            <div class="tag">话 术</div>
-            <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 一</div><div class="d">images/tree.jpg</div></div>
-          </a>
-          <a class="board b2" href="https://www.kdocs.cn/l/cbL35bxz1WDz" target="_blank" rel="noopener" title="引の板评">
-            <img src="images/tree.jpg" alt="" onload="this.parentNode.classList.add('loaded')" onerror="this.remove()">
-            <div class="tag">板 评</div>
-            <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 二</div><div class="d">images/tree.jpg</div></div>
-          </a>
-          <a class="board b3" href="https://www.kdocs.cn/l/cnhr3LrD41ja" target="_blank" rel="noopener" title="引の卡">
-            <img src="images/tree.jpg" alt="" onload="this.parentNode.classList.add('loaded')" onerror="this.remove()">
-            <div class="tag">卡 类</div>
-            <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 三</div><div class="d">images/tree.jpg</div></div>
-          </a>
-        </div>
-        <div class="stack-dots"><i class="on"></i><i></i><i></i></div>
+      <div class="flat-stage">
+        <a class="board b1" href="https://www.kdocs.cn/l/chIgc5VBmsjR" target="_blank" rel="noopener" title="陳引の话术_随笔">
+          <span class="spin"><img src="images/flake-1.jpg" alt="" onload="this.closest('.board').classList.add('loaded')" onerror="this.remove()"></span>
+          <div class="tag">话 术</div>
+          <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 一</div><div class="d">images/flake-1.jpg</div></div>
+        </a>
+        <a class="board b2" href="https://www.kdocs.cn/l/cbL35bxz1WDz" target="_blank" rel="noopener" title="引の板评">
+          <span class="spin"><img src="images/flake-2.jpg" alt="" onload="this.closest('.board').classList.add('loaded')" onerror="this.remove()"></span>
+          <div class="tag">板 评</div>
+          <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 二</div><div class="d">images/flake-2.jpg</div></div>
+        </a>
+        <a class="board b3" href="https://www.kdocs.cn/l/cnhr3LrD41ja" target="_blank" rel="noopener" title="引の卡">
+          <span class="spin"><img src="images/flake-3.jpg" alt="" onload="this.closest('.board').classList.add('loaded')" onerror="this.remove()"></span>
+          <div class="tag">卡 类</div>
+          <div class="ph"><span class="bar"></span><span class="bar2"></span><div class="t">其 三</div><div class="d">images/flake-3.jpg</div></div>
+        </a>
       </div>
       <div class="ever" id="ever">
         <button class="ever-btn" id="everBtn" type="button" aria-label="常驻设定">
@@ -746,63 +767,9 @@
       navGo(id === "navPrev" ? -1 : 1);
     });
   });
-  /* 叠卡：手动切换（点两侧露出的一张）/ 中间卡走自身链接 */
-  var cards = Array.prototype.slice.call(document.querySelectorAll(".stack .board"));
-  var dots = Array.prototype.slice.call(document.querySelectorAll(".stack-dots i"));
-  var cur = 0, cardTimer = null;
-
-  function renderCards() {
-    cards.forEach(function (c, k) {
-      c.classList.remove("pos-c", "pos-l", "pos-r");
-      var rel = (k - cur + cards.length) % cards.length;
-      c.classList.add(rel === 0 ? "pos-c" : (rel === 1 ? "pos-r" : "pos-l"));
-    });
-    dots.forEach(function (d, k) { d.classList.toggle("on", k === cur); });
-  }
-  function goCard(n) { cur = (n + cards.length) % cards.length; renderCards(); resetCardTimer(); }
-  function resetCardTimer() {
-    if (cardTimer) clearInterval(cardTimer);
-    cardTimer = setInterval(function () { goCard(cur + 1); }, 6000);
-  }
-  var stage = document.querySelector(".stack-stage");
-  var stackEl = document.querySelector(".stack");
-  var dragging = false, startX = 0, dragX = 0, moved = false;
-
-  function dragStart(e) {
-    dragging = true; moved = false; startX = e.clientX; dragX = 0;
-    stackEl.style.transition = "none";
-    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
-  }
-  function dragMove(e) {
-    if (!dragging) return;
-    dragX = e.clientX - startX;
-    if (Math.abs(dragX) > 8) moved = true;
-    stackEl.style.transform = "translateX(" + (dragX * 0.4) + "px)";
-  }
-  function dragEnd() {
-    if (!dragging) return;
-    dragging = false;
-    stackEl.style.transition = "transform .45s cubic-bezier(.2,.7,.2,1)";
-    if (Math.abs(dragX) > 45) goCard(dragX < 0 ? cur + 1 : cur - 1); /* 左划→下一张 */
-    stackEl.style.transform = "translateX(0)";
-  }
-  if (stage) {
-    stage.addEventListener("pointerdown", dragStart);
-    stage.addEventListener("pointermove", dragMove);
-    stage.addEventListener("pointerup", dragEnd);
-    stage.addEventListener("pointercancel", dragEnd);
-    stage.addEventListener("pointerleave", function () { if (dragging) dragEnd(); });
-  }
-
-  cards.forEach(function (c, k) {
-    c.addEventListener("click", function (e) {
-      e.stopPropagation();                    /* 不触发整页翻页 */
-      if (moved) { e.preventDefault(); moved = false; return; } /* 划动不误触 */
-      var rel = (k - cur + cards.length) % cards.length;
-      if (rel === 0) return;                  /* 中间那张：走 href 跳转 */
-      e.preventDefault();
-      goCard(rel === 1 ? cur + 1 : cur - 1);  /* 点右露边→下一张；左露边→上一张 */
-    });
+  /* 铺平卡牌：点任意一张直接打开对应文档，不触发整页翻页 */
+  Array.prototype.forEach.call(document.querySelectorAll(".flat-stage .board"), function (b) {
+    b.addEventListener("click", function (e) { e.stopPropagation(); });
   });
   /* 点击下方雪花 → 展开「常驻」 */
   var ever = document.getElementById("ever");
@@ -811,6 +778,11 @@
     everBtn.addEventListener("click", function (e) {
       e.stopPropagation();                 /* 不触发整页翻页 */
       ever.classList.toggle("on");
+    });
+    var everPanel = ever.querySelector(".ever-panel");
+    if (everPanel) everPanel.addEventListener("click", function (e) {
+      e.stopPropagation();                 /* 点便利贴本身可收起 */
+      ever.classList.remove("on");
     });
   }
 
@@ -831,9 +803,6 @@
       fall.appendChild(w);
     }
   }
-
-  renderCards();
-  resetCardTimer();
 
   show(0);
 
