@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>陳引</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#f6f5f2;
@@ -54,7 +57,7 @@
   /* ============ 固定底图（p1 / p2） ============ */
   .wallpaper{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .9s ease;}
   .wallpaper.on{opacity:1;}
-  .wallpaper img{width:min(72vw,600px);opacity:.5;mix-blend-mode:multiply;transition:opacity 1s ease,filter 1s ease;}
+  .wallpaper img{height:min(88vh,760px);width:auto;opacity:.5;mix-blend-mode:multiply;transition:opacity 1s ease,filter 1s ease;}
   body[data-mode="night"] .wallpaper img{filter:invert(1);opacity:.22;mix-blend-mode:screen;}
 
   /* ============ 右上角：雪 + 音乐　左上角：昼/夜 ============ */
@@ -121,8 +124,8 @@
 
   /* ============ 封面：旋转雪晶（纯 CSS 六角晶体，无图片 / 无 SVG） ============ */
   .cover-snow{
-    position:absolute;left:50%;top:50%;
-    width:264px;height:264px;margin-left:-132px;margin-top:-132px;
+    position:absolute;left:50%;top:calc(50% - 216px);
+    width:264px;height:264px;margin-left:-132px;margin-top:0;
     z-index:1;pointer-events:none;
     color:var(--ink);opacity:.34;
     animation:snowSpin 36s linear infinite;
@@ -172,6 +175,44 @@
     transform:translate(-50%,-50%);opacity:.3;
   }
   body[data-mode="night"] .cover-snow{opacity:.2;}
+  /* ---- 封面中央：Liora + 双模式文案 ---- */
+  .cover-center{
+    position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+    z-index:2;text-align:center;pointer-events:none;
+  }
+  .cover-name{
+    font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+    font-weight:500;font-size:clamp(40px,8vw,68px);
+    letter-spacing:.3em;text-indent:.3em;color:var(--ink);
+  }
+  .cover-line{
+    margin:26px 0 0;font-family:var(--serif);font-size:12px;
+    letter-spacing:.34em;text-indent:.34em;color:var(--ink-soft);
+  }
+  .cover-line .gap{display:inline-block;width:1.6em;}
+  .cover-night{display:none;}
+  body[data-mode="night"] .cover-day{display:none;}
+  body[data-mode="night"] .cover-night{display:block;}
+  /* ---- 封面：文字如雪花飘落，底部消散 ---- */
+  .cover-fall{
+    position:absolute;inset:0;overflow:hidden;z-index:1;pointer-events:none;
+    transition:opacity .9s ease;
+  }
+  .gone .cover-fall{opacity:0;}
+  .cover-fall span{
+    position:absolute;top:-8vh;font-family:"Cormorant Garamond",Georgia,serif;
+    font-size:var(--fs,14px);color:var(--ink);white-space:nowrap;
+    opacity:0;will-change:transform,opacity;
+    animation:wordFall var(--dur) linear var(--delay) infinite;
+    animation-play-state:paused;
+  }
+  .page.active .cover-fall span{animation-play-state:running;}
+  @keyframes wordFall{
+    0%{transform:translateY(0) rotate(0deg);opacity:0;}
+    10%{opacity:var(--op);}
+    82%{opacity:var(--op);}
+    100%{transform:translateY(118vh) rotate(var(--spin));opacity:0;}
+  }
   .cover-veil{
     position:absolute;inset:0;
     background:linear-gradient(to bottom,var(--veil) 0%,rgba(0,0,0,0) 45%,var(--veil) 100%);
@@ -416,7 +457,7 @@
     .grid{grid-template-columns:repeat(2,1fr);}
     .panel{padding:20px 16px;}
     ol.rules li{padding-left:32px;font-size:11.5px;}
-    .cover-snow{width:190px;height:190px;margin-left:-95px;margin-top:-95px;top:50%;}
+    .cover-snow{width:190px;height:190px;margin-left:-95px;top:calc(50% - 172px);}
     .stack-stage{height:300px;}
     .stack .board{left:-64px;top:-86px;width:128px;}
     .stack .board.pos-l{transform:translateX(-54px) scale(.9);}
@@ -474,7 +515,13 @@
         <span class="hex"></span><span class="hex h2"></span>
       </div>
     </div>
+    <div class="cover-fall" id="coverFall" aria-hidden="true"></div>
     <div class="cover-veil"></div>
+    <div class="cover-center">
+      <div class="cover-name">Liora</div>
+      <p class="cover-line cover-day">相逢前<span class="gap"></span>夜夜雪</p>
+      <p class="cover-line cover-night">故事序章，一盏微光，一夜雪</p>
+    </div>
   </section>
 
   <!-- 02 雪的成分 -->
@@ -765,6 +812,24 @@
       e.stopPropagation();                 /* 不触发整页翻页 */
       ever.classList.toggle("on");
     });
+  }
+
+  /* 封面：文字如雪花飘落（liora / pity / Snow / Meet） */
+  var fall = document.getElementById("coverFall");
+  if (fall) {
+    var words = ["liora", "pity", "Snow", "Meet"];
+    for (var i = 0; i < 14; i++) {
+      var w = document.createElement("span");
+      w.textContent = words[i % words.length];
+      var dur = 9 + Math.random() * 8;
+      w.style.left = (4 + Math.random() * 86) + "%";
+      w.style.setProperty("--fs", (11 + Math.random() * 10).toFixed(1) + "px");
+      w.style.setProperty("--dur", dur.toFixed(1) + "s");
+      w.style.setProperty("--delay", (-Math.random() * dur).toFixed(1) + "s");
+      w.style.setProperty("--spin", Math.round(Math.random() * 720 - 360) + "deg");
+      w.style.setProperty("--op", (0.22 + Math.random() * 0.34).toFixed(2));
+      fall.appendChild(w);
+    }
   }
 
   renderCards();
